@@ -124,9 +124,6 @@ class Mapper():
 
         return []
 
-    def reducer(self, key, values):
-        number_of_words = sum(values)
-        return key, number_of_words
 
 
 
