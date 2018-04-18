@@ -76,7 +76,7 @@ class MapReduce(object):
             else:
                 map_values[key] = value
 
-        return [(key, map_values[key]) for key in map_values.keys()]
+        return map_values
 
     def shuffle(self, key, reduce_id):
         """Use hsh function to shuffle map results"""
@@ -124,17 +124,6 @@ class Mapper():
 
         return []
 
-    def combiner(self, mapped_results):
-        number_of_words = {}
-
-        for key, value in mapped_results:
-            if key in number_of_words:
-                number_of_words[key] += value
-            else:
-                number_of_words[key] = value
-
-        return [(key, number_of_words[key]) for key in number_of_words.keys()]
-
     def reducer(self, key, values):
         number_of_words = sum(values)
         return key, number_of_words
@@ -148,7 +137,7 @@ class Reducer():
         self.key_values_map = key_values_map
 
     def reduce(self):
-        kv_list = []
+        kv_list = [(key, self.key_values_map[key]) for key in self.key_values_map.keys()]
 
         # TODO: write your code here!
 
