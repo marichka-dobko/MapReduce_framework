@@ -59,10 +59,6 @@ class MapReduce(object):
         mapper = Mapper(self.read_dir(id))
         mapper_res = mapper.map()
 
-        if self.combiner:
-            # TODO: implement combiner function
-            pass
-
         for reduce_id in range(self.num_reducers):  # because reducers will use the results in these files
             temp_map_file = open(self.get_map_file(id, reduce_id), "w")
             json.dump([(key, value) for (key, value) in mapper_res if self.shuffle(key, reduce_id)], temp_map_file)
@@ -75,7 +71,6 @@ class MapReduce(object):
                 map_values[key] += value
             else:
                 map_values[key] = value
-
         return map_values
 
     def shuffle(self, key, reduce_id):
@@ -98,7 +93,9 @@ class MapReduce(object):
                     pass
 
             temp_map_file.close()
-        key_values_map = self.combine(key_values_map)
+
+        if self.combiner:
+            key_values_map = self.combine(key_values_map)
 
         # Run reducer
         kv_list = Reducer(key_values_map).reduce()
