@@ -46,16 +46,13 @@ class MapReduce(object):
         else:
             "input_dir should be a file"
 
-    def combine(self):
-        pass
-
-    def read_dir(self, index, ext='txt'):
+    def read_dir(self, index):
         if not (self.input_dir is None):
-            return self.input_dir + '_map/' + str(index) + ext
+            return './temp' + str(index) + self.extension
         return 0
 
-    def get_map_file(self, id, reduce_id, ext='txt'):
-        return self.output_dir + "/map_files" + str(id) + "-" + str(reduce_id) + ext
+    def get_map_file(self, id, reduce_id):
+        return './temp/' + str(id) + "-" + str(reduce_id) + self.extension
 
     def run_map(self, id):
         """Runs mapper"""
@@ -68,11 +65,21 @@ class MapReduce(object):
 
         for reduce_id in range(self.num_reducers):  # because reducers will use the results in these files
             temp_map_file = open(self.get_map_file(id, reduce_id), "w")
-            json.dump([(key, value) for (key, value) in mapper_res if self.shuffle(key, reduce_id)]
-                      , temp_map_file)
+            json.dump([(key, value) for (key, value) in mapper_res if self.shuffle(key, reduce_id)], temp_map_file)
             temp_map_file.close()
 
+    def combine(self, mapper_results):
+        map_values = {}
+        for key, value in mapper_results:
+            if key in map_values:
+                map_values[key] += value
+            else:
+                map_values[key] = value
+
+        return [(key, map_values[key]) for key in map_values.keys()]
+
     def shuffle(self, key, reduce_id):
+        """Use hsh function to shuffle map results"""
         return reduce_id == (hash(key) % self.num_reducers)
 
     def run_reduce(self, id):
@@ -91,8 +98,9 @@ class MapReduce(object):
                     pass
 
             temp_map_file.close()
-            os.unlink(self.get_map_file(mapper_id, id))  # deleting temporary mapper files
+        key_values_map = self.combine(key_values_map)
 
+        # Run reducer
         kv_list = Reducer(key_values_map).reduce()
 
         output = open(self.output_dir + "/reduce_file_" + str(id) + self.extension, "w+")
@@ -116,6 +124,22 @@ class Mapper():
 
         return []
 
+    def combiner(self, mapped_results):
+        number_of_words = {}
+
+        for key, value in mapped_results:
+            if key in number_of_words:
+                number_of_words[key] += value
+            else:
+                number_of_words[key] = value
+
+        return [(key, number_of_words[key]) for key in number_of_words.keys()]
+
+    def reducer(self, key, values):
+        number_of_words = sum(values)
+        return key, number_of_words
+
+
 
 class Reducer():
     """This class should be implemented by user."""
@@ -125,8 +149,6 @@ class Reducer():
 
     def reduce(self):
         kv_list = []
-        for key in self.key_values_map:
-            kv_list.append((key, self.key_values_map[key]))
 
         # TODO: write your code here!
 
